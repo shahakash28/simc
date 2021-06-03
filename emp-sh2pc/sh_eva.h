@@ -8,7 +8,7 @@ class SemiHonestEva: public SemiHonestParty<IO> { public:
 	HalfGateEva<IO> * gc;
 	PRG prg;
 	SemiHonestEva(IO *io, HalfGateEva<IO> * gc): SemiHonestParty<IO>(io, BOB) {
-		this->gc = gc;	
+		this->gc = gc;
 		this->ot->setup_recv();
 		block seed; this->io->recv_block(&seed, 1);
 		this->shared_prg.reseed(&seed);
@@ -44,7 +44,7 @@ class SemiHonestEva: public SemiHonestParty<IO> { public:
 				}
 
 				for(int i = 0; i < length; ++i)
-					tmp[i] = (tmp[i] != b[i]); 
+					tmp[i] = (tmp[i] != b[i]);
 				this->io->send_data(tmp, length);
 
 				delete[] tmp;

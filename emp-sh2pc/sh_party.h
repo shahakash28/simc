@@ -18,7 +18,7 @@ class SemiHonestParty: public ProtocolExecution { public:
 
 	SemiHonestParty(IO * io, int party) : ProtocolExecution(party) {
 		this->io = io;
-		ot = new IKNP<IO>(io);
+		ot = new IKNP<IO>(io, true);
 		buf = new block[batch_size];
 		buff = new bool[batch_size];
 	}

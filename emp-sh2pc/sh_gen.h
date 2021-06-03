@@ -47,7 +47,7 @@ class SemiHonestGen: public SemiHonestParty<IO> { public:
 					memcpy(label, this->buf+this->top, length*sizeof(block));
 					this->top+=length;
 				}
-				
+
 				this->io->recv_data(tmp, length);
 				for (int i = 0; i < length; ++i)
 					if(tmp[i])

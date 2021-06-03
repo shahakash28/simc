@@ -1,0 +1,6 @@
+[submodule "extern/SEAL"]
+	path = extern/SEAL
+	url = https://github.com/microsoft/SEAL.git
+[submodule "extern/--force"]
+	path = extern/--force
+	url = https://github.com/microsoft/SEAL.git

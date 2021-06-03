@@ -7,7 +7,9 @@ include(${CMAKE_FOLDER}/cmake/common.cmake)
 include(${CMAKE_FOLDER}/cmake/enable_rdseed.cmake)
 include(${CMAKE_FOLDER}/cmake/enable_float.cmake)
 
+set (CMAKE_PREFIX_PATH "../emp-ot/")
 find_package(emp-ot REQUIRED)
+
 include_directories(${EMP-OT_INCLUDE_DIRS})
 
 # Installation
