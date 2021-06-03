@@ -239,8 +239,9 @@ int main(int argc, char **argv) {
   NetIO *io = new NetIO(party == 1 ? nullptr : address.c_str(), port);
   uint64_t comm_sent = 0;
   uint64_t start_comm = io->counter;
-  auto start = clock_start();
+  
   ConvField he_conv(party, io);
+  auto start = clock_start();
   start_comm = io->counter;
   long long t = time_from(start);
 

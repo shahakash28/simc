@@ -1404,6 +1404,7 @@ void ConvField::convolution_first(int32_t H, int32_t W, int32_t CI,
     vector<Ciphertext> ct_flat_rotations_input(data.inp_ct*data.filter_size);
     recv_encrypted_vector(io, context_, ct_flat_rotations_input);
     vector<vector<Ciphertext>> ct_vec(data.inp_ct, vector<Ciphertext>(data.filter_size));
+    #pragma omp parallel for num_threads(num_threads) schedule(static)
     for(int i=0; i<data.inp_ct; i++) {
       for(int j=0; j<data.filter_size; j++) {
         ct_vec[i][j] = ct_flat_rotations_input[i*data.filter_size+j];
@@ -1561,6 +1562,7 @@ void ConvField::convolution_gen(int32_t H, int32_t W, int32_t CI,
 
 
     vector<vector<Plaintext>> inp_plain(data.inp_ct, vector<Plaintext>(data.filter_size));
+    #pragma omp parallel for num_threads(num_threads) schedule(static)
     for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
       for(int f_idx = 0 ; f_idx < data.filter_size; f_idx++) {
         encoder_->encode(rotated_pt_server[ct_idx][f_idx], inp_plain[ct_idx][f_idx]);
@@ -1568,6 +1570,7 @@ void ConvField::convolution_gen(int32_t H, int32_t W, int32_t CI,
     }
 
     vector<vector<Plaintext>> inp_mac_plain(data.inp_ct, vector<Plaintext>(data.filter_size));
+    #pragma omp parallel for num_threads(num_threads) schedule(static)
     for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
       for(int f_idx = 0 ; f_idx < data.filter_size; f_idx++) {
         encoder_->encode(rotated_pt_mac_server[ct_idx][f_idx], inp_mac_plain[ct_idx][f_idx]);
@@ -1652,6 +1655,7 @@ void ConvField::convolution_gen(int32_t H, int32_t W, int32_t CI,
     vector<Ciphertext> ct_flat_rotations_input(data.inp_ct*data.filter_size);
     recv_encrypted_vector(io, context_, ct_flat_rotations_input);
     vector<vector<Ciphertext>> ct_vec(data.inp_ct, vector<Ciphertext>(data.filter_size));
+    #pragma omp parallel for num_threads(num_threads) schedule(static)
     for(int i=0; i<data.inp_ct; i++) {
       for(int j=0; j<data.filter_size; j++) {
         ct_vec[i][j] = ct_flat_rotations_input[i*data.filter_size+j];
@@ -1661,6 +1665,7 @@ void ConvField::convolution_gen(int32_t H, int32_t W, int32_t CI,
     vector<Ciphertext> ct_flat_rotations_input_mac(data.inp_ct*data.filter_size);
     recv_encrypted_vector(io, context_, ct_flat_rotations_input_mac);
     vector<vector<Ciphertext>> ct_mac_vec(data.inp_ct, vector<Ciphertext>(data.filter_size));
+    #pragma omp parallel for num_threads(num_threads) schedule(static)
     for(int i=0; i<data.inp_ct; i++) {
       for(int j=0; j<data.filter_size; j++) {
         ct_mac_vec[i][j] = ct_flat_rotations_input_mac[i*data.filter_size+j];
@@ -1677,7 +1682,7 @@ void ConvField::convolution_gen(int32_t H, int32_t W, int32_t CI,
 
     //vector<vector<Plaintext>> inp_plain_rotate = filter_rotations_dash(inp_plain, data, evaluator_, gal_keys_);
     //vector<vector<Plaintext>> inp_plain_mac_rotate = filter_rotations_dash(inp_mac_plain, data, evaluator_, gal_keys_);
-
+    #pragma omp parallel for num_threads(num_threads) schedule(static)
     for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
         for(int f_idx = 0; f_idx < data.filter_size; f_idx++) {
           evaluator_->add_plain(ct_vec[ct_idx][f_idx], inp_plain[ct_idx][f_idx], ct_vec_dash[ct_idx][f_idx]);
@@ -1755,12 +1760,14 @@ void ConvField::convolution_gen(int32_t H, int32_t W, int32_t CI,
         zero_idx = (data.filter_size - 1) / 2;
     }
 
+    #pragma omp parallel for num_threads(num_threads) schedule(static)
     for (int ct_idx = 0; ct_idx < data.inp_ct; ct_idx++) {
       evaluator_->multiply_plain(ct_vec_dash[ct_idx][zero_idx], *enc_mac_cube, mac_ver_op_cube[ct_idx]);
       evaluator_->multiply_plain(ct_mac_vec_dash[ct_idx][zero_idx], *enc_mac_sqrt, mac_ver_op_sqrt[ct_idx]);
       evaluator_->sub(mac_ver_op_cube[ct_idx], mac_ver_op_sqrt[ct_idx], mac_ver_op[ct_idx]);
     }
     //Generate Shares
+    #pragma omp parallel for num_threads(num_threads) schedule(static)
     for (int ct_idx = 0; ct_idx < data.out_ct; ct_idx++) {
         // Linear share
         evaluator_->sub_plain_inplace(linear_ct[ct_idx], linear[ct_idx]);

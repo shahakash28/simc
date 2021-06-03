@@ -136,8 +136,8 @@ int main(int argc, char** argv){
   uint64_t comm_sent = 0;
   uint64_t start_comm = io->counter;
   auto start = clock_start();
-  FCField he_fc(party, io);
   start_comm = io->counter;
+  FCField he_fc(party, io);
   long long t = time_from(start);
   total_time += t;
   if(choice_nn==MINIONN) {
