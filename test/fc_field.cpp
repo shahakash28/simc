@@ -17,6 +17,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+Modified by: Akash Shah
 */
 #include "LinearLayer/fc-field.h"
 
@@ -26,7 +27,7 @@ using namespace emp;
 
 int party = 0;
 int bitlength = 32;
-int num_threads = 4;
+int num_threads = 8;
 int port = 8000;
 string address = "127.0.0.1";
 int num_rows = 1001;

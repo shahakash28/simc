@@ -40,7 +40,7 @@ long long total_time = 0;
 
 int party = 0;
 int bitlength = 44;
-int num_threads = 4;
+int num_threads = 8;
 int port = 8000;
 string address = "127.0.0.1";
 int image_h = 28;
@@ -239,7 +239,7 @@ int main(int argc, char **argv) {
   NetIO *io = new NetIO(party == 1 ? nullptr : address.c_str(), port);
   uint64_t comm_sent = 0;
   uint64_t start_comm = io->counter;
-  
+
   ConvField he_conv(party, io);
   auto start = clock_start();
   start_comm = io->counter;

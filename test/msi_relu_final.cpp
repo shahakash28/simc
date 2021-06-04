@@ -4,12 +4,12 @@
 #include "seal/util/uintarith.h"
 #include "seal/util/uintarithsmallmod.h"
 #include <thread>
-#define MAX_THREADS 4
+#define MAX_THREADS 8
 using namespace emp;
 using namespace std;
 
 
-int num_threads = 4;
+int num_threads = 8;
 
 //Slackoverflow Code For bit-wise shift
 #define SHL128(v, n) \
