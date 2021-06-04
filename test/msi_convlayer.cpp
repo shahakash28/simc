@@ -283,17 +283,86 @@ int main(int argc, char **argv) {
     pad_valid = true;
     Conv_First(he_conv, image_h, image_w, filter_h, filter_w, inp_chans, out_chans, stride_h, stride_w, pad_valid);
 
-    image_h = 1;
-    image_w = 1;
+    //Layer 2
+    image_h = 32;
+    image_w = 32;
     filter_h = 3;
     filter_w = 3;
     stride_h = 1;
     stride_w = 1;
-    inp_chans = 1;
+    inp_chans = 64;
     out_chans = 64;
     pad_l = 1;
     pad_r = 1;
     pad_valid = true;
+    Conv_Gen(he_conv, image_h, image_w, filter_h, filter_w, inp_chans, out_chans, stride_h, stride_w, pad_valid);
+
+    //Layer 3
+    image_h = 16;
+    image_w = 16;
+    filter_h = 3;
+    filter_w = 3;
+    stride_h = 1;
+    stride_w = 1;
+    inp_chans = 64;
+    out_chans = 64;
+    pad_l = 1;
+    pad_r = 1;
+    pad_valid = true;
+    Conv_Gen(he_conv, image_h, image_w, filter_h, filter_w, inp_chans, out_chans, stride_h, stride_w, pad_valid);
+
+    //Layer 4
+    image_h = 16;
+    image_w = 16;
+    filter_h = 3;
+    filter_w = 3;
+    stride_h = 1;
+    stride_w = 1;
+    inp_chans = 64;
+    out_chans = 64;
+    pad_l = 1;
+    pad_r = 1;
+    pad_valid = true;
+    Conv_Gen(he_conv, image_h, image_w, filter_h, filter_w, inp_chans, out_chans, stride_h, stride_w, pad_valid);
+
+    //Layer 5
+    image_h = 8;
+    image_w = 8;
+    filter_h = 3;
+    filter_w = 3;
+    stride_h = 1;
+    stride_w = 1;
+    inp_chans = 64;
+    out_chans = 64;
+    pad_l = 1;
+    pad_r = 1;
+    pad_valid = true;
+    Conv_Gen(he_conv, image_h, image_w, filter_h, filter_w, inp_chans, out_chans, stride_h, stride_w, pad_valid);
+
+    //Layer 6
+    image_h = 8;
+    image_w = 8;
+    filter_h = 1;
+    filter_w = 1;
+    stride_h = 1;
+    stride_w = 1;
+    inp_chans = 64;
+    out_chans = 64;
+    //no padding
+    pad_valid = false;
+    Conv_Gen(he_conv, image_h, image_w, filter_h, filter_w, inp_chans, out_chans, stride_h, stride_w, pad_valid);
+
+    //Layer 7
+    image_h = 8;
+    image_w = 8;
+    filter_h = 1;
+    filter_w = 1;
+    stride_h = 1;
+    stride_w = 1;
+    inp_chans = 64;
+    out_chans = 16;
+    //no padding
+    pad_valid = false;
     Conv_Gen(he_conv, image_h, image_w, filter_h, filter_w, inp_chans, out_chans, stride_h, stride_w, pad_valid);
 
   }
