@@ -494,7 +494,11 @@ int main(int argc, char** argv) {
   for(int i=0; i<num_threads; i++) {
     comm_sent += (ioArr[i]->counter-start_comm[i]);
   }
-  comm_sent = comm_sent>>20;
+
+  cout<<"Sent Data (Bytes): "<<comm_sent<<endl;
+  comm_sent = comm_sent>>10;
+  cout<<"Sent Data (KB): "<<comm_sent<<endl;
+  comm_sent = comm_sent>>10;
   cout<<"Sent Data (MB): "<<comm_sent<<endl;
   cout << "########################################################" <<endl;
 
