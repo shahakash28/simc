@@ -445,7 +445,7 @@ int main(int argc, char** argv) {
   //Parse input arguments and configure parameters
 	parse_arguments(argc, argv, &party, &port, &bitlen, &nrelu);
   cout << "=====================Configuration======================" << endl;
-  cout<<"Party Id: "<< party<<", Server IP Address: "<< address <<", Port: "<<port<<", NRelu: "<<nrelu<<", Bitlen: "<<bitlen<<", Choice RELU: "<<choose_relu<<endl;
+  cout<<"Party Id: "<< party<<", Server IP Address: "<< address <<", Port: "<<port<<", NRelu: "<<nrelu<<", Bitlen: "<<bitlen<<", Choice RELU: "<<choose_relu<<", #Threads: "<<num_threads<<endl;
   cout << "========================================================" << endl;
   //Prepare Inputs
   std::random_device rd;
