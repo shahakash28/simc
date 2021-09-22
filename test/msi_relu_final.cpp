@@ -50,7 +50,7 @@ bool run_all = false;
 uint64_t mac_key;
 PRG prg;
 
-bool verify = false;
+bool verify = true;
 int MINIONN_RELUS[] = { 16*576, 16*64, 100*1
 };
 
@@ -144,12 +144,13 @@ void unpack_decryption_table(uint64_t *pack_table, uint64_t *ciphertexts, int pa
   }
 }
 
-void create_ciphertexts(Integer *garbled_data, block label_delta, uint64_t *ciphertexts, uint64_t* server_shares, int bitlen, int nrelu, uint64_t alpha, int l_idx) {
+void create_ciphertexts(Integer *garbled_data, block label_delta, uint64_t *ciphertexts, uint64_t* server_shares, int bitlen, int nrelu, uint64_t alpha, int l_idx, bool apply_prg) {
   uint64_t delta_int;
   memcpy(&delta_int, &label_delta[l_idx], 8);
 
   uint64_t mask = (1ULL << bitlen) - 1;
-  uint64_t label_temp;
+  block seed, label_block_0, label_block_1;
+  uint64_t label_temp_0, label_temp_1;
   uint64_t **random_val = (uint64_t **)malloc(nrelu*sizeof(uint64_t*));
   uint8_t pnp, cpnp;
   for(int i=0; i<nrelu; i++) {
@@ -159,24 +160,37 @@ void create_ciphertexts(Integer *garbled_data, block label_delta, uint64_t *ciph
   for(int i=0; i<nrelu; i++) {
     server_shares[i] = 0;
     for(int j=0; j<bitlen; j++) {
-      memcpy(&label_temp, &garbled_data[i].bits[j].bit[l_idx], 8);
+      if(apply_prg) {
+        memcpy(&seed, &garbled_data[i].bits[j].bit, 16);
+        PRG prg0(&seed);
+        prg0.random_data(&label_block_0, 16);
+        seed = garbled_data[i].bits[j].bit^label_delta;
+        PRG prg1(&seed);
+        prg1.random_data(&label_block_1, 16);
+
+        memcpy(&label_temp_0, &label_block_0[l_idx], 8);
+        memcpy(&label_temp_1, &label_block_1[l_idx], 8);
+
+      } else {
+        memcpy(&label_temp_0, &garbled_data[i].bits[j].bit[l_idx], 8);
+        label_temp_1 = label_temp_0^delta_int;
+      }
+
       prg.random_data(&random_val[i][j], 8);
       random_val[i][j] %= prime_mod;
       pnp = (garbled_data[i].bits[j].bit[0]) & 1;
       cpnp = 1 - pnp;
-      ciphertexts[(i*bitlen+j)*2+pnp] = (random_val[i][j])^(label_temp & mask);
-      ciphertexts[(i*bitlen+j)*2+cpnp] = ((random_val[i][j]+alpha)%prime_mod)^((label_temp^delta_int) & mask);
-      if(i==0) {
-        uint64_t l1 = label_temp & mask, l2 = label_temp^delta_int & mask;
-      }
+      ciphertexts[(i*bitlen+j)*2+pnp] = (random_val[i][j])^(label_temp_0 & mask);
+      ciphertexts[(i*bitlen+j)*2+cpnp] = ((random_val[i][j]+alpha)%prime_mod)^(label_temp_1 & mask);
       server_shares[i] = (server_shares[i] + mod_shift(random_val[i][j],j,prime_mod))%prime_mod;
     }
     server_shares[i] = prime_mod - server_shares[i];
   }
 }
 
-void decrypt_ciphertexts(Integer *garbled_data, uint64_t *ciphertexts, uint64_t* client_shares, int bitlen, int nrelu, int l_idx) {
+void decrypt_ciphertexts(Integer *garbled_data, uint64_t *ciphertexts, uint64_t* client_shares, int bitlen, int nrelu, int l_idx, bool apply_prg) {
   uint64_t label_temp;
+  block label_block;
   uint8_t pnp;
   uint64_t random_val;
 
@@ -185,7 +199,15 @@ void decrypt_ciphertexts(Integer *garbled_data, uint64_t *ciphertexts, uint64_t*
   for(int i=0; i<nrelu; i++) {
     client_shares[i] = 0;
     for(int j=0; j< bitlen; j++) {
-      memcpy(&label_temp, &garbled_data[i].bits[j].bit[l_idx], 8);
+      if(apply_prg) {
+        PRG prg(&garbled_data[i].bits[j].bit);
+        prg.random_data(&label_block, 16);
+
+        memcpy(&label_temp, &label_block[l_idx], 8);
+      } else {
+        memcpy(&label_temp, &garbled_data[i].bits[j].bit[l_idx], 8);
+      }
+
       pnp = (garbled_data[i].bits[j].bit[0]) & 1;
       random_val = ciphertexts[(i*bitlen+j)*2+pnp]^(label_temp & mask);
       client_shares[i] = (client_shares[i] + mod_shift(random_val,j,prime_mod))%prime_mod;
@@ -209,6 +231,7 @@ void msi_relu_6(int party, NetIO* io, uint64_t* inputs, int nrelu, int bitlen, u
     Y[i] = Integer(bitlen+1, inputs[i], BOB);
 
   Integer *S = new Integer[nrelu];
+  Integer *U = new Integer[nrelu];
   Integer *T = new Integer[nrelu];
 
   //Check if Bob's share is < p
@@ -264,9 +287,9 @@ void msi_relu_6(int party, NetIO* io, uint64_t* inputs, int nrelu, int bitlen, u
 
   if(party == ALICE) {
 
-    create_ciphertexts(S, delta_used, ip_cts, ip_ss, bitlen, nrelu, mac_key, 1);
-    create_ciphertexts(T, delta_used, op_cts, op_ss, bitlen, nrelu, 1, 0);
-    create_ciphertexts(T, delta_used, op_mcts, op_mss, bitlen, nrelu, mac_key, 1);
+    create_ciphertexts(S, delta_used, ip_cts, ip_ss, bitlen, nrelu, mac_key, 1, true);
+    create_ciphertexts(T, delta_used, op_cts, op_ss, bitlen, nrelu, 1, 0, false);
+    create_ciphertexts(T, delta_used, op_mcts, op_mss, bitlen, nrelu, mac_key, 1, false);
 
     pack_decryption_table(ip_pack_table, ip_cts, pack_size, batch_size, bitlen);
     pack_decryption_table(op_pack_table, op_cts, pack_size, batch_size, bitlen);
@@ -286,9 +309,9 @@ void msi_relu_6(int party, NetIO* io, uint64_t* inputs, int nrelu, int bitlen, u
     unpack_decryption_table(opm_pack_table, op_mcts, pack_size, batch_size, bitlen);
     //cout<<"First element (meth):"<<ip_pack_table[0]<<endl;
 
-    decrypt_ciphertexts(S, ip_cts, ip_ss, bitlen, nrelu, 1);
-    decrypt_ciphertexts(T, op_cts, op_ss, bitlen, nrelu, 0);
-    decrypt_ciphertexts(T, op_mcts, op_mss, bitlen, nrelu, 1);
+    decrypt_ciphertexts(S, ip_cts, ip_ss, bitlen, nrelu, 1, true);
+    decrypt_ciphertexts(T, op_cts, op_ss, bitlen, nrelu, 0, false);
+    decrypt_ciphertexts(T, op_mcts, op_mss, bitlen, nrelu, 1, false);
   }
 }
 

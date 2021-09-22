@@ -18,6 +18,7 @@ class SemiHonestEva: public SemiHonestParty<IO> { public:
 	void refill() {
 		prg.random_bool(this->buff, this->batch_size);
 		this->ot->recv_cot(this->buf, this->buff, this->batch_size);
+		std::cout<<"CP 8"<<std::endl;
 		this->top = 0;
 	}
 

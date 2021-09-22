@@ -17,11 +17,15 @@ class SemiHonestGen: public SemiHonestParty<IO> { public:
 		prg.random_block(&seed, 1);
 		this->io->send_block(&seed, 1);
 		this->shared_prg.reseed(&seed);
+		std::cout<<"CP 5"<<std::endl;
 		refill();
+		std::cout<<"CP 6"<<std::endl;
 	}
 
 	void refill() {
+		std::cout<<this->batch_size<<std::endl;
 		this->ot->send_cot(this->buf, this->batch_size);
+		std::cout<<"CP 7"<<std::endl;
 		this->top = 0;
 	}
 
