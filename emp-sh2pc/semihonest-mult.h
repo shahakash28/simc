@@ -15,16 +15,11 @@ public:
   block delta_used;
 
   SHGen(IO *ioObj, int batch_size = 1024*16) {
-    std::cout<<"CP 0"<<endl;
     io = ioObj;
     t = new HalfGateGen<IO>(io);
-    std::cout<<"CP 1"<<endl;
     lcirc_exec = t;
-    std::cout<<"CP 1.5"<<endl;
     lprot_exec = new SemiHonestGen<IO>(io, t);
-    std::cout<<"CP 2"<<endl;
     delta_used = t->delta;
-    std::cout<<"CP 3"<<endl;
   }
 
   void setup_execution_env(){

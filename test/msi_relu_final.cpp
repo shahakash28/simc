@@ -50,7 +50,7 @@ bool run_all = false;
 uint64_t mac_key;
 PRG prg;
 
-bool verify = true;
+bool verify = false;
 int MINIONN_RELUS[] = { 16*576, 16*64, 100*1
 };
 
@@ -215,7 +215,7 @@ void decrypt_ciphertexts(Integer *garbled_data, uint64_t *ciphertexts, uint64_t*
   }
 }
 
-void msi_relu_6(int party, NetIO* io, uint64_t* inputs, int nrelu, int bitlen, uint64_t* ip_ss, uint64_t* op_ss, uint64_t* op_mss) {
+void msi_relu_6(int party, int tid, NetIO* io, uint64_t* inputs, int nrelu, int bitlen, uint64_t* ip_ss, uint64_t* op_ss, uint64_t* op_mss) {
   //Public prime values
   Integer p(bitlen + 1, prime_mod, PUBLIC);
   Integer p_mod2(bitlen, prime_mod/2, PUBLIC);
@@ -287,9 +287,9 @@ void msi_relu_6(int party, NetIO* io, uint64_t* inputs, int nrelu, int bitlen, u
 
   if(party == ALICE) {
 
-    create_ciphertexts(S, delta_used, ip_cts, ip_ss, bitlen, nrelu, mac_key, 1, true);
-    create_ciphertexts(T, delta_used, op_cts, op_ss, bitlen, nrelu, 1, 0, false);
-    create_ciphertexts(T, delta_used, op_mcts, op_mss, bitlen, nrelu, mac_key, 1, false);
+    create_ciphertexts(S, delta_blocks[tid], ip_cts, ip_ss, bitlen, nrelu, mac_key, 1, true);
+    create_ciphertexts(T, delta_blocks[tid], op_cts, op_ss, bitlen, nrelu, 1, 0, false);
+    create_ciphertexts(T, delta_blocks[tid], op_mcts, op_mss, bitlen, nrelu, mac_key, 1, false);
 
     pack_decryption_table(ip_pack_table, ip_cts, pack_size, batch_size, bitlen);
     pack_decryption_table(op_pack_table, op_cts, pack_size, batch_size, bitlen);
@@ -371,7 +371,7 @@ void parse_arguments(int argc, char**arg, int *party, int *port, int *bitlen, in
 
 void thread_process(int tid, int party, uint64_t* inputs, int nrelu, int bitlen, uint64_t* ip_ss, uint64_t* op_ss, uint64_t* op_mss) {
   uint64_t *ptr = inputs+4608;
-  setup_semi_honest(ioArr[tid], party);
+  setup_semi_honest_mult(ioArr[tid], party, tid);
   int prev_ctr=0;
   int len = *(&MINIONN_RELUS+1)-MINIONN_RELUS;
   for(int i=0; i<len; i++) {
@@ -386,7 +386,7 @@ void thread_process(int tid, int party, uint64_t* inputs, int nrelu, int bitlen,
     uint64_t offset = prev_ctr + tid*nr_per_thread;
     //cout<<"Thread id: "<<tid<<", Offset: "<<offset<<", NR Threads: "<<nr_per_thread<<"Actual Threads: "<<actual_per_thread<<endl;
     //cout<<"Thread id:"<<tid<<", First Value (Out): "<<*(inputs+offset)<<endl;
-    msi_relu_6(party, ioArr[tid], inputs+offset, actual_per_thread, bitlen, ip_ss+offset, op_ss+offset, op_mss+offset);
+    msi_relu_6(party, tid, ioArr[tid], inputs+offset, actual_per_thread, bitlen, ip_ss+offset, op_ss+offset, op_mss+offset);
     prev_ctr += MINIONN_RELUS[i];
   }
   ioArr[tid]->flush();
@@ -395,7 +395,7 @@ void thread_process(int tid, int party, uint64_t* inputs, int nrelu, int bitlen,
 
 void thread_process_1(int tid, int party, uint64_t* inputs, int nrelu, int bitlen, uint64_t* ip_ss, uint64_t* op_ss, uint64_t* op_mss) {
   uint64_t *ptr = inputs+4608;
-  setup_semi_honest(ioArr[tid], party);
+  setup_semi_honest_mult(ioArr[tid], party, tid);
   int prev_ctr=0;
   int len = *(&CIFAR10_RELUS+1)-CIFAR10_RELUS;
   for(int i=0; i<len; i++) {
@@ -410,7 +410,7 @@ void thread_process_1(int tid, int party, uint64_t* inputs, int nrelu, int bitle
     uint64_t offset = prev_ctr + tid*nr_per_thread;
     //cout<<"Thread id: "<<tid<<", Offset: "<<offset<<", NR Threads: "<<nr_per_thread<<"Actual Threads: "<<actual_per_thread<<endl;
     //cout<<"Thread id:"<<tid<<", First Value (Out): "<<*(inputs+offset)<<endl;
-    msi_relu_6(party, ioArr[tid], inputs+offset, actual_per_thread, bitlen, ip_ss+offset, op_ss+offset, op_mss+offset);
+    msi_relu_6(party, tid, ioArr[tid], inputs+offset, actual_per_thread, bitlen, ip_ss+offset, op_ss+offset, op_mss+offset);
     prev_ctr += CIFAR10_RELUS[i];
   }
   ioArr[tid]->flush();

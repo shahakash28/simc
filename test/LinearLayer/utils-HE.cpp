@@ -171,12 +171,10 @@ void recv_encrypted_vector(NetIO *io, shared_ptr<SEALContext> &context_, vector<
   stringstream is;
   uint64_t ct_size[ct_vec.size()];
   uint64_t total_size=0;
-  cout<<ct_vec.size()<<endl;
   for(int i=0; i<ct_vec.size(); i++) {
     io->recv_data(&ct_size[i], sizeof(uint64_t));
     total_size += ct_size[i];
   }
-  cout<<"Total Size: "<<total_size<<endl;
 
   char *c_enc_result = new char[total_size];
   io->recv_data(c_enc_result, total_size);
@@ -203,7 +201,6 @@ void recv_ciphertext(NetIO *io, shared_ptr<SEALContext> &context_, Ciphertext &c
   stringstream is;
   uint64_t ct_size;
   io->recv_data(&ct_size, sizeof(uint64_t));
-  cout<<"Total Size: "<<ct_size<<endl;
   char *c_enc_result = new char[ct_size];
   io->recv_data(c_enc_result, ct_size);
   is.write(c_enc_result, ct_size);

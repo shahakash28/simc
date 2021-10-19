@@ -3,7 +3,9 @@
 
 #include "seal/util/uintarith.h"
 #include "seal/util/uintarithsmallmod.h"
+#include "LinearLayer/defines-HE.h"
 #include <thread>
+#include "LinearLayer/utils-HE.h"
 #define MAX_THREADS 8
 using namespace emp;
 using namespace std;
@@ -14,8 +16,71 @@ enum neural_net {
   CIFAR10
 };
 
-extern uint64_t prime_mod;
-extern uint64_t moduloMask;
+struct dimension {
+  int N;
+  int l;
+  int b;
+  int d;
+};
+
+neural_net choice_nn;
+neural_net def_nn = NONE;
+
+string address;
+
+uint64_t prime_val = 17592060215297;
+seal::Modulus mod(prime_val);
+
+uint64_t prime_mod;
+uint64_t moduloMask;
+uint64_t moduloMidPt;
+uint64_t avg_pool_const = 64;
+
+uint64_t mac_key;
+PRG prg;
+
+NetIO *ioArr[MAX_THREADS];
+
+uint64_t prime_field;
+
+int l = 44;
+
+typedef std::vector<uint64_t> uint64_1D;
+
+template <typename T> vector<T> make_vector(size_t size) {
+  return std::vector<T>(size);
+}
+
+template <typename T> T *make_array(size_t s1) { return new T[s1]; }
+
+template <typename T> T *make_array(size_t s1, size_t s2) {
+  return new T[s1 * s2];
+}
+
+template <typename T> T *make_array(size_t s1, size_t s2, size_t s3) {
+  return new T[s1 * s2 * s3];
+}
+
+template <typename T>
+T *make_array(size_t s1, size_t s2, size_t s3, size_t s4) {
+  return new T[s1 * s2 * s3 * s4];
+}
+
+template <typename T>
+T *make_array(size_t s1, size_t s2, size_t s3, size_t s4, size_t s5) {
+  return new T[s1 * s2 * s3 * s4 * s5];
+}
+
+uint64_t mod_mult(uint64_t a, uint64_t b) {
+  unsigned long long temp_result[2];
+  seal::util::multiply_uint64(a, b, temp_result);
+
+  /*uint64_t input[2];
+  input[0] = res[0];
+  input[1] = res[1];*/
+  uint64_t result = seal::util::barrett_reduce_128(temp_result, mod);
+  return result;
+}
 
 void div_floor(int64_t a, int64_t b, int64_t &quot, int64_t &rem) {
   assert(b > 0);
@@ -115,7 +180,6 @@ void AvgPool_pt(uint64_t N, uint64_t H, uint64_t W, uint64_t C, uint64_t ksizeH,
                 uint64_t C1,
                 std::vector<std::vector<std::vector<uint64_1D>>> &inArr,
                 std::vector<std::vector<std::vector<uint64_1D>>> &outArr) {
-
   uint64_t rows = (PublicMult((PublicMult((PublicMult(N, C)), H)), W));
 
   auto filterAvg = make_vector<uint64_t>(rows);
@@ -200,7 +264,7 @@ void AvgPool_pt(uint64_t N, uint64_t H, uint64_t W, uint64_t C, uint64_t ksizeH,
   }
 }
 
-void parse_arguments(int argc, char**arg, int *party, int *port, int *bitlen, int *nrelu) {
+void parse_arguments(int argc, char**arg, int *party, int *port, int *bitlen) {
   *party = atoi (arg[1]);
    address = arg[2];
 	*port = atoi (arg[3]);
@@ -215,12 +279,177 @@ void parse_arguments(int argc, char**arg, int *party, int *port, int *bitlen, in
   } else {
     choice_nn = neural_net(atoi (arg[5]));
   }
+
+  prime_mod = (*bitlen == 64 ? 0ULL : 1ULL << *bitlen);
+  moduloMask = prime_mod - 1;
+  moduloMidPt = prime_mod / 2;
 }
 
 int main(int argc, char** argv) {
   srand(time(NULL));
   int port, party, nrelu, bitlen;
   //Parse input arguments and configure parameters
-	parse_arguments(argc, argv, &party, &port, &bitlen, &nrelu);
+	parse_arguments(argc, argv, &party, &port, &bitlen);
+
+  ioArr[0] = new NetIO(party==ALICE ? nullptr : address.c_str(), port);
+
+  //Prepare and share inputs
+  uint64_t layers_count=2;
+
+  uint64_t *inputs[layers_count], *inputs_mac[layers_count], *outputs[layers_count], *outputs_mac[layers_count];
+  uint64_t *prepared_input[layers_count], *prepared_input_mac[layers_count];
+  uint64_t *send_inputs[layers_count], *send_input_mac[layers_count];
+
+  dimension input_dim[layers_count], output_dim[layers_count];
+
+  if(choice_nn == MINIONN) {
+    input_dim[0].N = 1; input_dim[0].l = 24, input_dim[0].b = 24, input_dim[0].d = 16;
+    input_dim[1].N = 1; input_dim[1].l = 8, input_dim[1].b = 8, input_dim[1].d = 16;
+
+    output_dim[0].N = 1; output_dim[0].l = 12, output_dim[0].b = 12, output_dim[0].d = 16;
+    output_dim[1].N = 1; output_dim[1].l = 4, output_dim[1].b = 4, output_dim[1].d = 16;
+  } else {
+    input_dim[0].N = 1; input_dim[0].l = 32, input_dim[0].b = 32, input_dim[0].d = 64;
+    input_dim[1].N = 1; input_dim[1].l = 16, input_dim[1].b = 16, input_dim[1].d = 64;
+
+    output_dim[0].N = 1; output_dim[0].l = 16, output_dim[0].b = 16, output_dim[0].d = 64;
+    output_dim[1].N = 1; output_dim[1].l = 16, output_dim[1].b = 16, output_dim[1].d = 64;
+  }
+
+  for(int i=0; i< layers_count; i++) {
+    inputs[i] = make_array<uint64_t>((int32_t)input_dim[i].N, (int32_t)input_dim[i].l, (int32_t)input_dim[i].b, (int32_t)input_dim[i].d);
+    inputs_mac[i] = make_array<uint64_t>((int32_t)input_dim[i].N, (int32_t)input_dim[i].l, (int32_t)input_dim[i].b, (int32_t)input_dim[i].d);
+
+    outputs[i] = make_array<uint64_t>((int32_t)output_dim[i].N, (int32_t)output_dim[i].l, (int32_t)output_dim[i].b, (int32_t)output_dim[i].d);
+    outputs_mac[i] = make_array<uint64_t>((int32_t)output_dim[i].N, (int32_t)output_dim[i].l, (int32_t)output_dim[i].b, (int32_t)output_dim[i].d);
+  }
+
+  std::random_device rd;
+  std::mt19937_64 eng(rd());
+  std::uniform_int_distribution<uint64_t> distr;
+
+  if(party == ALICE) {
+    prg.random_data(&mac_key, 8);
+    mac_key %= prime_val;
+
+    for(int i=0; i<layers_count; i++) {
+      prepared_input[i] = make_array<uint64_t>((int32_t)input_dim[i].N, (int32_t)input_dim[i].l, (int32_t)input_dim[i].b, (int32_t)input_dim[i].d);
+      prepared_input_mac[i] = make_array<uint64_t>((int32_t)input_dim[i].N, (int32_t)input_dim[i].l, (int32_t)input_dim[i].b, (int32_t)input_dim[i].d);
+      send_inputs[i] = make_array<uint64_t>((int32_t)input_dim[i].N, (int32_t)input_dim[i].l, (int32_t)input_dim[i].b, (int32_t)input_dim[i].d);
+      send_input_mac[i] = make_array<uint64_t>((int32_t)input_dim[i].N, (int32_t)input_dim[i].l, (int32_t)input_dim[i].b, (int32_t)input_dim[i].d);
+      int arr_size = input_dim[i].N * input_dim[i].l * input_dim[i].b * input_dim[i].d;
+      random_mod_p(prg, prepared_input[i], arr_size, prime_val);
+      for(int j=0; j< arr_size; j++) {
+        prepared_input_mac[i][j] = mod_mult(mac_key,prepared_input[i][j]);
+      }
+      random_mod_p(prg, inputs[i], arr_size, prime_val);
+      random_mod_p(prg, inputs_mac[i], arr_size, prime_val);
+      for(int j=0; j<arr_size; j++) {
+        send_inputs[i][j] = (prepared_input[i][j] - inputs[i][j])%prime_val;
+        send_input_mac[i][j] = (prepared_input_mac[i][j] - inputs_mac[i][j])%prime_val;
+      }
+      ioArr[0]->send_data(send_inputs[i], sizeof(uint64_t) * arr_size);
+      ioArr[0]->send_data(send_input_mac[i], sizeof(uint64_t) * arr_size);
+    }
+  } else {
+    for(int i=0; i<layers_count; i++) {
+      int arr_size = input_dim[i].N * input_dim[i].l * input_dim[i].b * input_dim[i].d;
+      ioArr[0]->recv_data(inputs[i], sizeof(uint64_t)* arr_size);
+      ioArr[0]->recv_data(inputs_mac[i], sizeof(uint64_t)* arr_size);
+    }
+  }
+
+
   //Performance Result
+  std::vector<std::vector<std::vector<std::vector<uint64_t>>>> inVec[layers_count];
+  std::vector<std::vector<std::vector<std::vector<uint64_t>>>> inVecMac[layers_count];
+  std::vector<std::vector<std::vector<std::vector<uint64_t>>>> outVec[layers_count];
+  std::vector<std::vector<std::vector<std::vector<uint64_t>>>> outVecMac[layers_count];
+
+  for(int i=0; i<layers_count; i++) {
+   inVec[i].resize(input_dim[i].N, std::vector<std::vector<std::vector<uint64_t>>>(
+                         input_dim[i].l, std::vector<std::vector<uint64_t>>(
+                                   input_dim[i].b, std::vector<uint64_t>(input_dim[i].d, 0))));
+   inVecMac[i].resize(input_dim[i].N, std::vector<std::vector<std::vector<uint64_t>>>(
+                          input_dim[i].l, std::vector<std::vector<uint64_t>>(
+                                    input_dim[i].b, std::vector<uint64_t>(input_dim[i].d, 0))));
+   outVec[i].resize(output_dim[i].N, std::vector<std::vector<std::vector<uint64_t>>>(
+                          output_dim[i].l, std::vector<std::vector<uint64_t>>(
+                                    output_dim[i].b, std::vector<uint64_t>(output_dim[i].d, 0))));
+   outVecMac[i].resize(output_dim[i].N, std::vector<std::vector<std::vector<uint64_t>>>(
+                         output_dim[i].l, std::vector<std::vector<uint64_t>>(
+                                   output_dim[i].b, std::vector<uint64_t>(output_dim[i].d, 0))));
+    for(int j=0; j<input_dim[i].N; j++) {
+      for(int k=0; k<input_dim[i].l; k++) {
+        for(int l=0; l<input_dim[i].b; l++) {
+          for(int m=0; m<input_dim[i].d; m++) {
+            inVec[i][j][k][l][m] = inputs[i][(j) * (input_dim[i].l) * (input_dim[i].b) * (input_dim[i].d) + (k) * (input_dim[i].b) * (input_dim[i].d) + (l) * (input_dim[i].d) + (m)];
+            inVecMac[i][j][k][l][m] = (*((inputs_mac[i]) + (j) * (input_dim[i].l) * (input_dim[i].b) * (input_dim[i].d) + (k) * (input_dim[i].b) * (input_dim[i].d) + (l) * (input_dim[i].d) + (m)));
+          }
+        }
+      }
+    }
+  }
+
+
+  auto start = clock_start();
+  if(choice_nn == MINIONN) {
+    AvgPool_pt((int32_t) output_dim[0].N, (int32_t) output_dim[0].l, (int32_t) output_dim[0].b, (int32_t) output_dim[0].d, (int32_t) 2,
+                    (int32_t) 2, (int32_t) 0, (int32_t) 0,
+                    (int32_t) 0, (int32_t) 0, (int32_t) 2,
+                    (int32_t) 2, (int32_t) input_dim[0].N, (int32_t) input_dim[0].l, (int32_t) input_dim[0].b,
+                    (int32_t) input_dim[0].d,
+                    inVec[0], outVec[0]);
+
+    AvgPool_pt((int32_t) output_dim[0].N, (int32_t) output_dim[0].l, (int32_t) output_dim[0].b, (int32_t) output_dim[0].d, (int32_t) 2,
+                    (int32_t) 2, (int32_t) 0, (int32_t) 0,
+                    (int32_t) 0, (int32_t) 0, (int32_t) 2,
+                    (int32_t) 2, (int32_t) input_dim[0].N, (int32_t) input_dim[0].l, (int32_t) input_dim[0].b,
+                    (int32_t) input_dim[0].d,
+                    inVecMac[0], outVecMac[0]);
+    AvgPool_pt((int32_t) output_dim[1].N, (int32_t) output_dim[1].l, (int32_t) output_dim[1].b, (int32_t) output_dim[1].d, (int32_t) 2,
+                    (int32_t) 2, (int32_t) 0, (int32_t) 0,
+                    (int32_t) 0, (int32_t) 0, (int32_t) 2,
+                    (int32_t) 2, (int32_t) input_dim[1].N, (int32_t) input_dim[1].l, (int32_t) input_dim[1].b,
+                    (int32_t) input_dim[1].d,
+                    inVec[1], outVecMac[1]);
+    AvgPool_pt((int32_t) output_dim[1].N, (int32_t) output_dim[1].l, (int32_t) output_dim[1].b, (int32_t) output_dim[1].d, (int32_t) 2,
+                    (int32_t) 2, (int32_t) 0, (int32_t) 0,
+                    (int32_t) 0, (int32_t) 0, (int32_t) 2,
+                    (int32_t) 2, (int32_t) input_dim[1].N, (int32_t) input_dim[1].l, (int32_t) input_dim[1].b,
+                    (int32_t) input_dim[1].d,
+                    inVecMac[1], outVecMac[1]);
+  } else {
+    AvgPool_pt((int32_t) output_dim[0].N, (int32_t) output_dim[0].l, (int32_t) output_dim[0].b, (int32_t) output_dim[0].d, (int32_t) 2,
+                    (int32_t) 2, (int32_t) 0, (int32_t) 0,
+                    (int32_t) 0, (int32_t) 0, (int32_t) 2,
+                    (int32_t) 2, (int32_t) input_dim[0].N, (int32_t) input_dim[0].l, (int32_t) input_dim[0].b,
+                    (int32_t) input_dim[0].d,
+                    inVec[0], outVec[0]);
+
+    AvgPool_pt((int32_t) output_dim[0].N, (int32_t) output_dim[0].l, (int32_t) output_dim[0].b, (int32_t) output_dim[0].d, (int32_t) 2,
+                    (int32_t) 2, (int32_t) 0, (int32_t) 0,
+                    (int32_t) 0, (int32_t) 0, (int32_t) 2,
+                    (int32_t) 2, (int32_t) input_dim[0].N, (int32_t) input_dim[0].l, (int32_t) input_dim[0].b,
+                    (int32_t) input_dim[0].d,
+                    inVecMac[0], outVecMac[0]);
+    AvgPool_pt((int32_t) output_dim[1].N, (int32_t) output_dim[1].l, (int32_t) output_dim[1].b, (int32_t) output_dim[1].d, (int32_t) 2,
+                    (int32_t) 2, (int32_t) 0, (int32_t) 1,
+                    (int32_t) 0, (int32_t) 1, (int32_t) 1,
+                    (int32_t) 1, (int32_t) input_dim[1].N, (int32_t) input_dim[1].l, (int32_t) input_dim[1].b,
+                    (int32_t) input_dim[1].d,
+                    inVec[1], outVec[1]);
+    AvgPool_pt((int32_t) output_dim[1].N, (int32_t) output_dim[1].l, (int32_t) output_dim[1].b, (int32_t) output_dim[1].d, (int32_t) 2,
+                    (int32_t) 2, (int32_t) 0, (int32_t) 1,
+                    (int32_t) 0, (int32_t) 1, (int32_t) 1,
+                    (int32_t) 1, (int32_t) input_dim[1].N, (int32_t) input_dim[1].l, (int32_t) input_dim[1].b,
+                    (int32_t) input_dim[1].d,
+                    inVecMac[1], outVecMac[1]);
+  }
+  long long t = time_from(start);
+  cout << "######################Performance#######################" <<endl;
+  cout<<"Time Taken: "<<t<<" mus"<<endl;
+  cout<<"Sent Data (MB): "<<0<<endl;
+  cout << "########################################################" <<endl;
+
 }
