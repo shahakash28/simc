@@ -16,7 +16,7 @@ TODO: Update the licensing information.
    sudo apt-get install -y libeigen3-dev
    ```
 3. Follow the installation steps of \[[emp-toolkit/emp-sh2pc](https://github.com/emp-toolkit/emp-sh2pc)\].
-4. Clone this repo in the parent directory 'msi-code'.
+4. Clone this repo in the parent directory `msi-code`.
 5. Install SEAL 3.64 
    a. Clone \[[SEAL](https://github.com/microsoft/SEAL.git)\] repo in the parent directory `msi-code`.
    b. Execute 
