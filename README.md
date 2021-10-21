@@ -6,10 +6,19 @@ Disclaimer: This repository is a proof-of-concept prototype.
 TODO: Update the licensing information.
 
 # Installation
-1. Follow the installation steps of \[[emp-toolkit/emp-sh2pc](https://github.com/emp-toolkit/emp-sh2pc)\].
-2. Clone this repo in the same parent directory as emp-sh2pc repo.
-3. Install SEAL 3.64 
-   a. Clone \[[SEAL](https://github.com/microsoft/SEAL.git)\] repo.
+1. Create parent directory `msi-code`
+   ```
+   mkdir msi-code && cd msi-code
+   ```
+2. To install Eigen3 do:
+   ```
+   sudo apt-get update -y
+   sudo apt-get install -y libeigen3-dev
+   ```
+3. Follow the installation steps of \[[emp-toolkit/emp-sh2pc](https://github.com/emp-toolkit/emp-sh2pc)\].
+4. Clone this repo in the parent directory 'msi-code'.
+5. Install SEAL 3.64 
+   a. Clone \[[SEAL](https://github.com/microsoft/SEAL.git)\] repo in the parent directory `msi-code`.
    b. Execute 
    ```
    cd SEAL
@@ -20,10 +29,10 @@ TODO: Update the licensing information.
    sudo make install
    ```
 
-#Compilation
-1. In the parent directory, go to emp-tool and do `git checkout df363bf30b56c48a12c352845efa3a4d8f75b388`.
-2. Next, go to emp-ot and do `git checkout 3b21d6314cb1e7d8dbb9bb1f1ed80261738e4f4c`.
-3. For multi-threading support, go to emp-tool and run the following:
+# Compilation
+1. In `msi-code`, go to `emp-tool` and do `git checkout df363bf30b56c48a12c352845efa3a4d8f75b388`.
+2. Next, go to `emp-ot` in `msi-code` and do `git checkout 3b21d6314cb1e7d8dbb9bb1f1ed80261738e4f4c`.
+3. For multi-threading support, go to `emp-tool` and run the following:
 ```
 cmake . -DTHREADING=ON
 make -j
@@ -33,7 +42,7 @@ sudo make install
 3. Finally, do the same in our (simc) repository.
 
 ## Run
-Run the following test files:
+Run the following test files from path `msi-code/simc`:
 1. Fully-connected Layer: In one terminal run `bin/test_msi_linearlayer 1 0.0.0.0 <port_no> 44 <neural_network>` and in other terminal run `bin/test_msi_linearlayer 2 <server_ip_address> <port_no> 44 <neural_network>`. 
 
 2. Convolution Layer: In one terminal run `bin/test_msi_convlayer 1 0.0.0.0 <port_no> 44 <neural_network>` and in other terminal run `bin/test_msi_convlayer 2 <server_ip_address> <port_no> 44 <neural_network>`.
