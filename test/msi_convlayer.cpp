@@ -56,6 +56,7 @@ int stride = 1;
 int filter_precision = 12;
 int pad_l = 0;
 int pad_r = 0;
+string benchmark;
 
 seal::Modulus mod(prime_mod);
 
@@ -218,21 +219,20 @@ void parse_arguments(int argc, char**arg, int *party, int *port) {
   } else {
     choice_nn = neural_net(atoi (arg[4]));
   }
+
+  if(choice_nn == MINIONN)
+    benchmark = "mnist";
+  else
+    benchmark = "cifar10";
 }
 
 int main(int argc, char **argv) {
   parse_arguments(argc, argv, &party, &port);
 
-  cout << "=================================================================="
-       << endl;
-  cout << "Role: " << party << " - Bitlength: " << bitlength
-       << " - Mod: " << prime_mod << " - Image: " << image_h << "x" << image_h
-       << "x" << inp_chans << " - Filter: " << filter_h << "x" << filter_h
-       << "x" << out_chans << "\n- Stride: " << stride << "x" << stride
-       << " - Padding: " << pad_l << "x" << pad_r
-       << " - # Threads: " << num_threads << endl;
-  cout << "=================================================================="
-       << endl;
+  cout<<"Executing Convolution Layers ..."<<endl;
+  cout << "=====================Configuration======================" << endl;
+  cout<<"Role: "<< party<<" - IP Address: "<< address <<" - Port: "<<port<<" - Benchmark: "<<benchmark<<" - Bitlength: "<<bitlength<<endl;
+  cout << "========================================================" << endl;
 
   bool pad_valid;
 

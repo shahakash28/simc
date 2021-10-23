@@ -10,7 +10,9 @@ class SemiHonestEva: public SemiHonestParty<IO> { public:
 	SemiHonestEva(IO *io, HalfGateEva<IO> * gc): SemiHonestParty<IO>(io, BOB) {
 		this->gc = gc;
 		this->ot->setup_recv();
+
 		block seed; this->io->recv_block(&seed, 1);
+		
 		this->shared_prg.reseed(&seed);
 		refill();
 	}
@@ -18,7 +20,6 @@ class SemiHonestEva: public SemiHonestParty<IO> { public:
 	void refill() {
 		prg.random_bool(this->buff, this->batch_size);
 		this->ot->recv_cot(this->buf, this->buff, this->batch_size);
-		std::cout<<"CP 8"<<std::endl;
 		this->top = 0;
 	}
 

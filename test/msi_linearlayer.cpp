@@ -26,6 +26,7 @@ string address = "127.0.0.1";
 int num_rows = 512;
 int common_dim = 1024;
 int filter_precision = 15;
+string benchmark;
 
 seal::Modulus mod(prime_mod);
 
@@ -105,10 +106,18 @@ void parse_arguments(int argc, char**arg, int *party, int *port) {
   } else {
     choice_nn = neural_net(atoi (arg[4]));
   }
+  if(choice_nn == MINIONN)
+    benchmark = "mnist";
+  else
+    benchmark = "cifar10";
 }
 
 int main(int argc, char** argv){
   parse_arguments(argc, argv, &party, &port);
+  cout<<"Executing Fully-Connected Layers ..."<<endl;
+  cout << "=====================Configuration======================" << endl;
+  cout<<"Role: "<< party<<" - IP Address: "<< address <<" - Port: "<<port<<" - Benchmark: "<<benchmark<<" - Bitlength: "<<bitlength<<endl;
+  cout << "========================================================" << endl;
 
   NetIO * io = new NetIO(party==ALICE ? nullptr : address.c_str(), port);
 

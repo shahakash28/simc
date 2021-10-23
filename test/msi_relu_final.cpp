@@ -49,6 +49,7 @@ string address;
 bool run_all = false;
 uint64_t mac_key;
 PRG prg;
+string benchmark;
 
 bool verify = false;
 int MINIONN_RELUS[] = { 16*576, 16*64, 100*1
@@ -337,6 +338,7 @@ void parse_arguments(int argc, char**arg, int *party, int *port, int *bitlen, in
       } else {
         *nrelu = atoi(arg[6]);
       }
+      benchmark = "non-selected";
     }
     break;
     case MINIONN: {
@@ -345,6 +347,7 @@ void parse_arguments(int argc, char**arg, int *party, int *port, int *bitlen, in
       for(int i=0; i< len; i++) {
         *nrelu += MINIONN_RELUS[i];
       }
+      benchmark = "mnist";
     }
     break;
     case CIFAR10: {
@@ -353,6 +356,7 @@ void parse_arguments(int argc, char**arg, int *party, int *port, int *bitlen, in
       for(int i=0; i< len; i++) {
         *nrelu += CIFAR10_RELUS[i];
       }
+      benchmark = "cifar10";
     }
   }
 
@@ -424,8 +428,9 @@ int main(int argc, char** argv) {
   int port, party, nrelu, bitlen;
   //Parse input arguments and configure parameters
 	parse_arguments(argc, argv, &party, &port, &bitlen, &nrelu);
+  cout<<"Executing Non-linear Layers ..."<<endl;
   cout << "=====================Configuration======================" << endl;
-  cout<<"Party Id: "<< party<<", Server IP Address: "<< address <<", Port: "<<port<<", NRelu: "<<nrelu<<", Bitlen: "<<bitlen<<endl;
+  cout<<"Role: "<< party<<" - IP Address: "<< address <<" - Port: "<<port<<" - Benchmark: "<<benchmark<<" - Bitlength: "<<bitlen<<endl;
   cout << "========================================================" << endl;
   //Prepare Inputs
   std::random_device rd;
@@ -482,10 +487,10 @@ int main(int argc, char** argv) {
   cout<<"Sent Data (MB): "<<comm_sent<<endl;
   cout << "########################################################" <<endl;
 
-  ioArr[0] = new NetIO(party==ALICE ? nullptr : address.c_str(), port);
-  cout<<"nrelu: "<<nrelu<<endl;
   //Test Protocol
   if(verify) {
+    ioArr[0] = new NetIO(party==ALICE ? nullptr : address.c_str(), port);
+    cout<<"nrelu: "<<nrelu<<endl;
     if(party == BOB) {
       ioArr[0]->send_data(inputs, sizeof(uint64_t) * nrelu);
       ioArr[0]->send_data(ip_ss, sizeof(uint64_t) * nrelu);

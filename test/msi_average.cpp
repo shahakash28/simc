@@ -38,6 +38,7 @@ uint64_t avg_pool_const = 64;
 
 uint64_t mac_key;
 PRG prg;
+string benchmark;
 
 NetIO *ioArr[MAX_THREADS];
 
@@ -280,16 +281,29 @@ void parse_arguments(int argc, char**arg, int *party, int *port, int *bitlen) {
     choice_nn = neural_net(atoi (arg[5]));
   }
 
+  if(choice_nn == MINIONN) {
+    benchmark = "mnist";
+  } else {
+    benchmark = "cifar10";
+  }
+
   prime_mod = (*bitlen == 64 ? 0ULL : 1ULL << *bitlen);
   moduloMask = prime_mod - 1;
   moduloMidPt = prime_mod / 2;
 }
 
 int main(int argc, char** argv) {
+
   srand(time(NULL));
   int port, party, nrelu, bitlen;
   //Parse input arguments and configure parameters
 	parse_arguments(argc, argv, &party, &port, &bitlen);
+
+  cout<<"Executing Average-pool Layers ..."<<endl;
+  cout << "=====================Configuration======================" << endl;
+  cout<<"Role: "<< party<<" - IP Address: "<< address <<" - Port: "<<port<<" - Benchmark: "<<benchmark<<" - Bitlength: "<<bitlen<<endl;
+  cout << "========================================================" << endl;
+
 
   ioArr[0] = new NetIO(party==ALICE ? nullptr : address.c_str(), port);
 
