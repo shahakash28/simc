@@ -84,8 +84,11 @@ Input Parameters:
 4. <#threads>: Number of threads
 
 If <num_relus> <=2, set <#threads>=1,
+
 else if <num_relus> <=4, set <#threads>=2,
+
 else if <num_relus> <=16, set <#threads>=4,
+
 else if <num_relus> >16, set <#threads>=8.
 
 Example:
