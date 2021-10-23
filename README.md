@@ -83,13 +83,13 @@ Input Parameters:
 3. <num_relus>: Number of ReLUs
 4. <#threads>: Number of threads
 
-If <num_relus> <=2, set <#threads>=1,
-
+```
+if <num_relus> <=2, set <#threads>=1,
 else if <num_relus> <=4, set <#threads>=2,
-
 else if <num_relus> <=16, set <#threads>=4,
-
 else if <num_relus> >16, set <#threads>=8.
+```
+Note: For different system-configuration, different number of threads may provide best performance for given number of ReLUs.
 
 Example:
 ```
