@@ -41,7 +41,7 @@ sudo make install
 2. Do the same for emp-ot repository.
 3. Finally, do the same in our (simc) repository.
 
-## Run
+## Run Neuralnet Benchmarks
 Run the following test files from path `msi-code/simc`:
 1. Fully-connected Layer: In one terminal run `bin/test_msi_linearlayer 1 0.0.0.0 <port_no> 44 <neural_network>` and in other terminal run `bin/test_msi_linearlayer 2 <server_ip_address> <port_no> 44 <neural_network>`. 
 
@@ -70,6 +70,28 @@ Terminal 2: bin/test_msi_relu_final 2 <server_ip_address> 31000 44 1 0 0 8
 Average Pool Layer:
 Terminal 1: bin/test_msi_average 1 0.0.0.0 31000 44 1
 Terminal 2: bin/test_msi_average 2 <server_ip_address> 31000 44 1
+```
+
+## Run Neuralnet Micro-benchmarks
+```
+Terminal 1: bin/test_msi_microbenchmark 1 0.0.0.0 31000 44 <benchmark_choice> <num_relus> <#threads> 
+Terminal 2: bin/test_msi_microbenchmark 2 <server_ip_address> 31000 44 <benchmark_choice> <num_relus> <#threads> 
+```
+Input Parameters:
+1. <server_ip_address>: IP Address of Server.
+2. <benchmark_choice>: 0 - ReLU6, 1 - ReLU.
+3. <num_relus>: Number of ReLUs
+4. <#threads>: Number of threads
+
+If <num_relus> <=2, set <#threads>=1,
+else if <num_relus> <=4, set <#threads>=2,
+else if <num_relus> <=16, set <#threads>=4,
+else if <num_relus> >16, set <#threads>=8.
+
+Example:
+```
+Terminal 1: bin/test_msi_microbenchmark 1 0.0.0.0 31000 44 0 16384 8 
+Terminal 2: bin/test_msi_microbenchmark 2 <server_ip_address> 31000 44 0 16384 8 
 ```
 
 ## Contact
