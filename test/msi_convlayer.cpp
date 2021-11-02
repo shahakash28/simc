@@ -214,10 +214,10 @@ void parse_arguments(int argc, char**arg, int *party, int *port) {
   *party = atoi (arg[1]);
    address = arg[2];
 	*port = atoi (arg[3]);
-  if(argc < 5) {
+  if(argc < 6) {
     choice_nn = def_nn;
   } else {
-    choice_nn = neural_net(atoi (arg[4]));
+    choice_nn = neural_net(atoi (arg[5]));
   }
 
   if(choice_nn == MINIONN)
